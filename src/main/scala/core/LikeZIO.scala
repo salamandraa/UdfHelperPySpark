@@ -8,12 +8,12 @@ final class LikeZIO[+A](logs: Seq[String], eitherOpt: Option[Either[Seq[Throwabl
 
   @inline def addLog(log: String): LikeZIO[A] = this.copy(logs = log +: this.logs)
 
-  @inline def addLog(logs: Seq[String]): LikeZIO[A] = this.copy(logs = logs ++: this.logs)
+  @inline def addLog(logs: Seq[String]): LikeZIO[A] = this.copy(logs = this.logs ++ logs)
 
   @inline def map[U](f: A => U): LikeZIO[U] = {
     val resultEitherOpt = this.eitherOpt.map {
-      case Right(optValue) => Right(optValue.map(f))
       case Left(errors) => Left(errors)
+      case Right(optValue) => Right(optValue.map(f))
     }
     LikeZIO(logs = this.logs, eitherOpt = resultEitherOpt)
   }
@@ -29,9 +29,9 @@ final class LikeZIO[+A](logs: Seq[String], eitherOpt: Option[Either[Seq[Throwabl
         case Left(thisExceptions) => LikeZIO(logs = thisLogs, eitherOpt = Some(Left(thisExceptions)))
         case Right(thisValueOpt) => thisValueOpt match {
           case Some(thisValue) =>
-            val nestedInstance = ev(thisValue)
+            val nestedInstance: LikeZIO[U] = ev(thisValue)
             val newLogs = thisLogs ++ nestedInstance.logs
-            LikeZIO(logs = newLogs, eitherOpt = nestedInstance.eitherOpt)
+            new LikeZIO(logs = newLogs, eitherOpt = nestedInstance.eitherOpt)
           case None => LikeZIO(logs = thisLogs, eitherOpt = Some(Right(None)))
         }
       }
@@ -41,8 +41,8 @@ final class LikeZIO[+A](logs: Seq[String], eitherOpt: Option[Either[Seq[Throwabl
 
   @inline def filter(f: A => Boolean): LikeZIO[A] = {
     val resultEitherOpt = this.eitherOpt.map {
-      case Right(optValue) => Right(optValue.filter(f))
       case Left(errors) => Left(errors)
+      case Right(optValue) => Right(optValue.filter(f))
     }
     LikeZIO(logs = this.logs, eitherOpt = resultEitherOpt)
   }
