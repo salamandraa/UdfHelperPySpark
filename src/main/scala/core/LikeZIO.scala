@@ -25,8 +25,17 @@ final class LikeZIO[+A](logs: Seq[String], eitherOpt: Option[Either[Seq[Throwabl
     val thisEitherOpt = this.eitherOpt
 
     thisEitherOpt match {
-      case Some(value) => ???
-      case None => this.copy[U](eitherOpt = None)
+      case Some(thisEither) => thisEither match {
+        case Left(thisExceptions) => LikeZIO(logs = thisLogs, eitherOpt = Some(Left(thisExceptions)))
+        case Right(thisValueOpt) => thisValueOpt match {
+          case Some(thisValue) =>
+            val nestedInstance = ev(thisValue)
+            val newLogs = thisLogs ++ nestedInstance.logs
+            LikeZIO(logs = newLogs, eitherOpt = nestedInstance.eitherOpt)
+          case None => LikeZIO(logs = thisLogs, eitherOpt = Some(Right(None)))
+        }
+      }
+      case None => LikeZIO(logs = thisLogs, eitherOpt = None)
     }
   }
 
