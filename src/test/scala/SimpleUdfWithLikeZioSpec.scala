@@ -51,21 +51,7 @@ class SimpleUdfWithLikeZioSpec extends FlatSpec with Matchers with SparkTest wit
 
     val applesIn = getApples
 
-    val udfAdd2 = udf { value: Int =>
-
-      implicit val likeZioLog: LikeZIO[Int] = LikeZIO(value + 1, "Start")
-
-      val result = for {
-        valueAdd1 <- likeZioLog.map(_ => value + 1)
-
-        _ <- LikeZIO.addLog("add 1")
-        valueAdd2 <- LikeZIO(valueAdd1 + 1)
-        _ <- LikeZIO.addLog("add 1")
-        _ <- LikeZIO.addLog("End")
-      } yield valueAdd2
-
-      result.prepareForSpark
-    }
+    val udfAdd2 = UdfAdd2.scalaUdf
 
     applesIn.show()
     val applesWithAdd2 = applesIn.withColumn("add2", udfAdd2(col("id")))

@@ -17,7 +17,7 @@ trait SparkTest {
     .getOrCreate()
 
   protected def dropWarehouseLocation(): Unit = {
-    FileUtils.deleteDirectory(new File(nameWarehouseLocation))
+    List(new File(nameWarehouseLocation), new File("metastore_db")).foreach(FileUtils.deleteDirectory)
   }
 
 

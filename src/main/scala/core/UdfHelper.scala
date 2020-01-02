@@ -4,46 +4,44 @@ import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions._
 import scala.reflect.runtime.universe.TypeTag
 
-sealed trait UdfCommon {
-//  def scalaUdf: UserDefinedFunction
-}
+sealed trait UdfHelper
 
-object UdfCommon {
+object UdfHelper {
 
-  trait Udf0[RT] extends UdfCommon {
+  trait Udf0Helper[RT] extends UdfHelper {
     protected def udfFun: Function0[LikeZIO[RT]]
 
     def javaUdf(): LikeZIO.LikeZIOForSpark[RT] = {
       udfFun.apply().prepareForSpark
     }
 
-//    override def scalaUdf: UserDefinedFunction = udf {
-//      () => this.udfFun.apply().prepareForSpark
-//    }
+    def scalaUdf(implicit rtTypeTag: TypeTag[RT]): UserDefinedFunction = udf {
+      () => this.udfFun.apply().prepareForSpark
+    }
   }
 
-  trait Udf1[RT, A1] extends UdfCommon {
+  trait Udf1Helper[RT, A1] extends UdfHelper {
     protected def udfFun: Function1[A1, LikeZIO[RT]]
 
     def javaUdf(a1: A1): LikeZIO.LikeZIOForSpark[RT] = {
       udfFun.apply(a1).prepareForSpark
     }
 
-//    override def scalaUdf: UserDefinedFunction = udf {
-//      a1: A1 => udfFun.apply(a1).prepareForSpark
-//    }
+    def scalaUdf(implicit rtTypeTag: TypeTag[RT], a1TypeTag: TypeTag[A1]): UserDefinedFunction = udf {
+      a1: A1 => udfFun.apply(a1).prepareForSpark
+    }
   }
 
-  trait Udf2[RT, A1, A2] extends UdfCommon {
+  trait Udf2Helper[RT, A1, A2] extends UdfHelper {
     protected def udfFun: Function2[A1, A2, LikeZIO[RT]]
 
     def javaUdf(a1: A1, a2: A2): LikeZIO.LikeZIOForSpark[RT] = {
       udfFun.apply(a1, a2).prepareForSpark
     }
 
-//    override def scalaUdf: UserDefinedFunction = udf {
-//      (a1: A1, a2: A2) => udfFun.apply(a1, a2).prepareForSpark
-//    }
+    def scalaUdf(implicit rtTypeTag: TypeTag[RT], a1TypeTag: TypeTag[A1], a2TypeTag: TypeTag[A2]): UserDefinedFunction = udf {
+      (a1: A1, a2: A2) => udfFun.apply(a1, a2).prepareForSpark
+    }
   }
 
   //
