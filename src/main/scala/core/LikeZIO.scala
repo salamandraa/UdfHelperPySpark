@@ -4,7 +4,7 @@ package core
 import scala.util.{Failure, Success, Try}
 
 
-final class LikeZIO[+A](_dirtyLogger: DirtyLogger, _eitherOpt: Option[Either[Seq[Throwable], Option[A]]]) {
+final class LikeZIO[+A](_dirtyLogger: DirtyLogger, _either: Either[Seq[Throwable], Option[A]]) {
 
   import LikeZIO._
 
@@ -19,50 +19,45 @@ final class LikeZIO[+A](_dirtyLogger: DirtyLogger, _eitherOpt: Option[Either[Seq
   }
 
   @inline def map[U](f: A => U): LikeZIO[U] = {
-    val resultEitherOpt = this._eitherOpt.map {
+    val resultEither = this._either match {
       case Left(errors) => Left(errors)
       case Right(optValue) => Right(optValue.map(f))
     }
-    LikeZIO(dirtyLogger = _dirtyLogger, eitherOpt = resultEitherOpt)
+    LikeZIO(dirtyLogger = _dirtyLogger, either = resultEither)
   }
 
   @inline def flatMap[U](f: A => LikeZIO[U]): LikeZIO[U] = this.map(f).flatten
 
   @inline def flatten[U](implicit ev: A <:< LikeZIO[U]): LikeZIO[U] = {
     val thisDirtyLogger = this._dirtyLogger
-    val thisEitherOpt = this._eitherOpt
 
-    thisEitherOpt match {
-      case Some(thisEither) => thisEither match {
-        case Left(thisExceptions) => LikeZIO(dirtyLogger = thisDirtyLogger, eitherOpt = Some(Left(thisExceptions)))
-        case Right(thisValueOpt) => thisValueOpt match {
-          case Some(thisValue) =>
-            val nestedInstance: LikeZIO[U] = ev(thisValue)
-            val newLogs = thisDirtyLogger.merge(nestedInstance.dirtyLogger)
-            LikeZIO(dirtyLogger = newLogs, eitherOpt = nestedInstance.eitherOpt)
-          case None => LikeZIO(dirtyLogger = thisDirtyLogger, eitherOpt = Some(Right(None)))
-        }
+    this._either match {
+      case Left(thisExceptions) => LikeZIO(dirtyLogger = thisDirtyLogger, either = Left(thisExceptions))
+      case Right(thisValueOpt) => thisValueOpt match {
+        case Some(thisValue) =>
+          val nestedInstance: LikeZIO[U] = ev(thisValue)
+          val newLogs = thisDirtyLogger.merge(nestedInstance.dirtyLogger)
+          LikeZIO(dirtyLogger = newLogs, either = nestedInstance.either)
+        case None => LikeZIO(dirtyLogger = thisDirtyLogger, either = Right(None))
       }
-      case None => LikeZIO(dirtyLogger = thisDirtyLogger, eitherOpt = None)
     }
+
+
   }
 
   @inline def filter(f: A => Boolean): LikeZIO[A] = {
-    val resultEitherOpt = this._eitherOpt.map {
+    val resultEitherOpt = this._either match {
       case Left(errors) => Left(errors)
       case Right(optValue) => Right(optValue.filter(f))
     }
-    LikeZIO(dirtyLogger = this._dirtyLogger, eitherOpt = resultEitherOpt)
+    LikeZIO(dirtyLogger = this._dirtyLogger, either = resultEitherOpt)
   }
 
   def prepareForSpark[U >: A]: LikeZIOForSpark[U] = {
 
-    val (value, exceptions) = _eitherOpt match {
-      case Some(either) => either match {
-        case Left(errors) => None -> Some(errors.map(_.toString))
-        case Right(optValue) => optValue -> None
-      }
-      case None => None -> None
+    val (value, exceptions) = _either match {
+      case Left(errors) => None -> Some(errors.map(_.toString))
+      case Right(optValue) => optValue -> None
     }
 
     val logs = _dirtyLogger.logs
@@ -73,9 +68,9 @@ final class LikeZIO[+A](_dirtyLogger: DirtyLogger, _eitherOpt: Option[Either[Seq
 
   private def dirtyLogger: DirtyLogger = _dirtyLogger
 
-  private def eitherOpt: Option[Either[Seq[Throwable], Option[A]]] = _eitherOpt
+  private def either: Either[Seq[Throwable], Option[A]] = _either
 
-  @inline private def copy[U >: A](dirtyLogger: DirtyLogger = this._dirtyLogger, eitherOpt: Option[Either[Seq[Throwable], Option[U]]] = this._eitherOpt): LikeZIO[U] = LikeZIO(dirtyLogger, eitherOpt)
+  @inline private def copy[U >: A](dirtyLogger: DirtyLogger = this._dirtyLogger, either: Either[Seq[Throwable], Option[U]] = this._either): LikeZIO[U] = LikeZIO(dirtyLogger, either)
 }
 
 object LikeZIO {
@@ -87,20 +82,6 @@ object LikeZIO {
   def addLog[T](log: String)(implicit likeZio: LikeZIO[T]): LikeZIO[T] = likeZio.addLog(log)
 
   def addLog[T](logs: Seq[String])(implicit likeZio: LikeZIO[T]): LikeZIO[T] = likeZio.addLog(logs)
-
-
-  final def fromLog(log: String): LikeZIO[Nothing] = {
-    val dirtyLogger = DirtyLogger()
-    dirtyLogger.addLog(log)
-    LikeZIO(dirtyLogger = dirtyLogger, eitherOpt = None)
-  }
-
-
-  final def fromLog(logs: Seq[String]): LikeZIO[Nothing] = {
-    val dirtyLogger = DirtyLogger()
-    dirtyLogger.addLog(logs)
-    LikeZIO(dirtyLogger = dirtyLogger, eitherOpt = None)
-  }
 
 
   final def apply[T](value: => T): LikeZIO[T] = apply(Try(Option(value)))
@@ -115,18 +96,39 @@ object LikeZIO {
       case Failure(exception) => Left(List(exception))
     }
 
-    LikeZIO(dirtyLogger = DirtyLogger(), eitherOpt = Some(either))
+    LikeZIO(dirtyLogger = DirtyLogger(), either = either)
   }
 
-  final def failed[T](exception: Throwable): LikeZIO[T] = LikeZIO(dirtyLogger = DirtyLogger(), eitherOpt = Some(Left(List(exception))))
+  final def apply[T](value: => T, log: String): LikeZIO[T] = apply(Try(Option(value)), List(log))
 
-  final def failed[T](exceptions: List[Throwable]): LikeZIO[T] = LikeZIO(dirtyLogger = DirtyLogger(), eitherOpt = Some(Left(exceptions)))
+  final def fromOpt[T](value: => Option[T], log: String): LikeZIO[T] = apply(Try(value), List(log))
 
-  final def successful[T](result: T): LikeZIO[T] = LikeZIO(dirtyLogger = DirtyLogger(), eitherOpt = Some(Right(Option(result))))
+  final def fromTry[T](value: => Try[T], log: String): LikeZIO[T] = apply(value.map(Option(_)), List(log))
+
+  final def apply[T](value: => T, logs: Seq[String]): LikeZIO[T] = apply(Try(Option(value)), logs)
+
+  final def fromOpt[T](value: => Option[T], logs: Seq[String]): LikeZIO[T] = apply(Try(value), logs)
+
+  final def fromTry[T](value: => Try[T], logs: Seq[String]): LikeZIO[T] = apply(value.map(Option(_)), logs)
+
+  final def apply[T](value: Try[Option[T]], logs: Seq[String]): LikeZIO[T] = {
+    val either = value match {
+      case Success(value) => Right(value)
+      case Failure(exception) => Left(List(exception))
+    }
+
+    LikeZIO(dirtyLogger = DirtyLogger().addLog(logs), either = either)
+  }
+
+  final def failed[T](exception: Throwable): LikeZIO[T] = LikeZIO(dirtyLogger = DirtyLogger(), either = Left(List(exception)))
+
+  final def failed[T](exceptions: List[Throwable]): LikeZIO[T] = LikeZIO(dirtyLogger = DirtyLogger(), either = Left(exceptions))
+
+  final def successful[T](result: T): LikeZIO[T] = LikeZIO(dirtyLogger = DirtyLogger(), either = Right(Option(result)))
 
 
-  final private def apply[T](dirtyLogger: DirtyLogger, eitherOpt: Option[Either[Seq[Throwable], Option[T]]]): LikeZIO[T] = {
-    new LikeZIO[T](dirtyLogger, eitherOpt)
+  final private def apply[T](dirtyLogger: DirtyLogger, either: Either[Seq[Throwable], Option[T]]): LikeZIO[T] = {
+    new LikeZIO[T](dirtyLogger, either)
   }
 
 }

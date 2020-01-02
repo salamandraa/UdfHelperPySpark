@@ -32,7 +32,7 @@ class SimpleUdfWithLikeZioSpec extends FlatSpec with Matchers with SparkTest wit
 
     val udfAdd2 = udf { value: Int =>
 
-      implicit val likeZioLog: LikeZIO[Nothing] = LikeZIO.fromLog("Start")
+      implicit val likeZioLog: LikeZIO[Int] = LikeZIO(value + 1,"Start")
 
       val result = for {
         valueAdd1 <- likeZioLog.map(_ => value + 1)
