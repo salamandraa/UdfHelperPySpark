@@ -9,12 +9,12 @@ final class LikeZIO[+A](_dirtyLogger: DirtyLogger, _either: Either[Seq[Throwable
   import LikeZIO._
 
   def addLog(log: String): LikeZIO[A] = {
-    _dirtyLogger.addLog(log)
+    if (_either.isRight) _dirtyLogger.addLog(log)
     this
   }
 
   def addLog(logs: Seq[String]): LikeZIO[A] = {
-    _dirtyLogger.addLog(logs)
+    if (_either.isRight) _dirtyLogger.addLog(logs)
     this
   }
 

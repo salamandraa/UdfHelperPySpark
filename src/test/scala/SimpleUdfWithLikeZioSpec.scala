@@ -32,7 +32,7 @@ class SimpleUdfWithLikeZioSpec extends FlatSpec with Matchers with SparkTest wit
 
     val udfAdd2 = udf { value: Int =>
 
-      implicit val likeZioLog: LikeZIO[Int] = LikeZIO(value + 1,"Start")
+      implicit val likeZioLog: LikeZIO[Int] = LikeZIO(value + 1, "Start")
 
       val result = for {
         valueAdd1 <- likeZioLog.map(_ => value + 1)
@@ -47,10 +47,27 @@ class SimpleUdfWithLikeZioSpec extends FlatSpec with Matchers with SparkTest wit
     }
 
     applesIn.show()
-    val applesOut = applesIn.withColumn("col_udf", udfAdd2(col("id")))
+    val applesOut = applesIn.withColumn("add2", udfAdd2(col("id")))
 
     applesOut.printSchema()
     applesOut.show(false)
+
+    val udfHyperbola = udf { value: Int =>
+
+      implicit val likeZioLog: LikeZIO[Int] = LikeZIO(1 / (value - 2), "Start")
+
+      val result = likeZioLog
+        .addLog("Calculated")
+        .addLog("End")
+
+
+      result.prepareForSpark
+    }
+
+    val applesOut2 = applesIn.withColumn("hyperbola", udfHyperbola(col("id")))
+
+    applesOut2.printSchema()
+    applesOut2.show(false)
 
 
   }
