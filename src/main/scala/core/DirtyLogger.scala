@@ -2,14 +2,15 @@ package core
 
 import java.io.Closeable
 
-import scala.collection.mutable.{ArrayBuffer, Seq => MutableSeq}
+import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 
-class DirtyLogger(_logs: ArrayBuffer[String] = ArrayBuffer.empty, var isClose: Boolean = false) extends Closeable {
+final class DirtyLogger(_logs: ArrayBuffer[String] = ArrayBuffer.empty, var isClose: Boolean = false) extends Closeable {
   def logs: Option[ArrayBuffer[String]] = if (isClose) None else Some(_logs)
 
   def addLog(log: String): Unit = _logs += log
 
-  def addLog(logs: MutableSeq[String]): Unit = _logs ++= logs
+  def addLog(logs: mutable.Seq[String]): Unit = _logs ++= logs
 
   def merge(other: DirtyLogger): DirtyLogger = {
     other.logs match {
@@ -22,7 +23,7 @@ class DirtyLogger(_logs: ArrayBuffer[String] = ArrayBuffer.empty, var isClose: B
 
   }
 
-  private def convert[T](sq: Seq[T]): MutableSeq[T] = MutableSeq[T](sq: _*)
+  private def convert[T](sq: Seq[T]): mutable.Seq[T] = mutable.Seq[T](sq: _*)
 
   def addLog(logs: Seq[String]): Unit = addLog(convert(logs))
 

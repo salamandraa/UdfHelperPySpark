@@ -6,10 +6,17 @@ import scala.util.{Failure, Success, Try}
 
 final class LikeZIO[+A](_dirtyLogger: DirtyLogger, _eitherOpt: Option[Either[Seq[Throwable], Option[A]]]) {
 
+  import LikeZIO._
 
-  def addLog(log: String): Unit = _dirtyLogger.addLog(log)
+  def addLog(log: String): LikeZIO[A] = {
+    _dirtyLogger.addLog(log)
+    this
+  }
 
-  def addLog(logs: Seq[String]): Unit = _dirtyLogger.addLog(logs)
+  def addLog(logs: Seq[String]): LikeZIO[A] = {
+    _dirtyLogger.addLog(logs)
+    this
+  }
 
   @inline def map[U](f: A => U): LikeZIO[U] = {
     val resultEitherOpt = this._eitherOpt.map {
@@ -48,6 +55,22 @@ final class LikeZIO[+A](_dirtyLogger: DirtyLogger, _eitherOpt: Option[Either[Seq
     LikeZIO(dirtyLogger = this._dirtyLogger, eitherOpt = resultEitherOpt)
   }
 
+  def prepareForSpark[U >: A]: LikeZIOForSpark[U] = {
+
+    val (value, exceptions) = _eitherOpt match {
+      case Some(either) => either match {
+        case Left(errors) => None -> Some(errors.map(_.toString))
+        case Right(optValue) => optValue -> None
+      }
+      case None => None -> None
+    }
+
+    val logs = _dirtyLogger.logs
+    _dirtyLogger.close()
+
+    LikeZIOForSpark(value, exceptions, logs)
+  }
+
   private def dirtyLogger: DirtyLogger = _dirtyLogger
 
   private def eitherOpt: Option[Either[Seq[Throwable], Option[A]]] = _eitherOpt
@@ -56,6 +79,15 @@ final class LikeZIO[+A](_dirtyLogger: DirtyLogger, _eitherOpt: Option[Either[Seq
 }
 
 object LikeZIO {
+
+  import scala.collection.mutable
+
+  final case class LikeZIOForSpark[T](value: Option[T], exceptions: Option[Seq[String]], logs: Option[mutable.Seq[String]])
+
+  def addLog[T](log: String)(implicit likeZio: LikeZIO[T]): LikeZIO[T] = likeZio.addLog(log)
+
+  def addLog[T](logs: Seq[String])(implicit likeZio: LikeZIO[T]): LikeZIO[T] = likeZio.addLog(logs)
+
 
   final def fromLog(log: String): LikeZIO[Nothing] = {
     val dirtyLogger = DirtyLogger()
