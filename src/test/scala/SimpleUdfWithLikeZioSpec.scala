@@ -1,16 +1,18 @@
 import core.LikeZIO
 import org.apache.spark.sql.{Dataset, SparkSession}
 import org.scalatest._
+import udfs.examples.UdfAdd2
 
 import scala.collection.mutable
-import scala.collection.parallel.immutable
 
 
 object SimpleUdfWithLikeZioSpec {
 
   case class Apple(id: Int, colour: String, size: Double)
 
-  case class AppleWareHouse(apples: List[Apple])
+  case class AppleWarehouse(apples: List[Apple])
+
+  case class AppleCompany(warehouses: List[AppleWarehouse])
 
   def getApples(implicit spark: SparkSession): Dataset[Apple] = {
     import spark.implicits._
@@ -23,16 +25,16 @@ object SimpleUdfWithLikeZioSpec {
     ).toDS()
   }
 
-  def getAppleWareHouses(implicit spark: SparkSession): Dataset[AppleWareHouse] = {
+  def getAppleWareHouses(implicit spark: SparkSession): Dataset[AppleWarehouse] = {
     import spark.implicits._
     List(
-      AppleWareHouse(
+      AppleWarehouse(
         List(
           Apple(1, "red", 10.0),
           Apple(2, "green", 15.0),
           Apple(3, "grey", 20.0))
       ),
-      AppleWareHouse(
+      AppleWarehouse(
         List(Apple(4, "red", 25.0))
       )).toDS()
   }
@@ -70,6 +72,17 @@ class SimpleUdfWithLikeZioSpec extends FlatSpec with Matchers with SparkTest wit
 
     applesWithAdd2.printSchema()
     applesWithAdd2.show(false)
+
+
+    val javaUdfAdd2 = new UdfAdd2().call _
+    spark.udf.register("javaUdfAdd2", javaUdfAdd2)
+
+    applesIn.write.saveAsTable("apples")
+
+    val applesWithJavaAdd2 = spark.sql("select id, colour, size, javaUdfAdd2(id) from apples ")
+
+    applesWithJavaAdd2.printSchema()
+    applesWithJavaAdd2.show(false)
 
     val udfHyperbola = udf { value: Int =>
 
