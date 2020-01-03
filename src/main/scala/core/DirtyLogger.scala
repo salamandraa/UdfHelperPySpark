@@ -6,7 +6,7 @@ import java.util.UUID
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-final class DirtyLogger(_logs: ArrayBuffer[String] = ArrayBuffer.empty, var isClose: Boolean = false) extends Closeable {
+final class DirtyLogger(_logs: ArrayBuffer[String] = ArrayBuffer.empty, var isClose: Boolean = false) extends Equals with Closeable {
   protected val id: UUID = UUID.randomUUID()
 
 
@@ -45,6 +45,23 @@ final class DirtyLogger(_logs: ArrayBuffer[String] = ArrayBuffer.empty, var isCl
   private def convert[T](sq: Seq[T]): mutable.Seq[T] = mutable.Seq[T](sq: _*)
 
   def addLog(logs: Seq[String]): DirtyLogger = addLog(convert(logs))
+
+
+  override def canEqual(a: Any): Boolean = a.isInstanceOf[DirtyLogger]
+
+  override def equals(that: Any): Boolean =
+    that match {
+      case that: DirtyLogger =>
+        that.canEqual(this) && this.hashCode == that.hashCode && this.logs == that.logs && this.isClose == that.isClose
+      case _ => false
+    }
+
+  override def hashCode: Int = {
+    val prime = 31
+    val result0 = 1
+    val result1 = prime * result0 + _logs.hashCode;
+    prime * result1 + isClose.hashCode()
+  }
 
   override def close(): Unit = {
     isClose = true

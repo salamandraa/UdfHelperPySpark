@@ -4,7 +4,7 @@ package core
 import scala.util.{Failure, Success, Try}
 
 
-final class LikeZIO[+A](_dirtyLogger: DirtyLogger, _either: Either[Seq[Throwable], Option[A]]) {
+final class LikeZIO[+A](_dirtyLogger: DirtyLogger, _either: Either[Seq[Throwable], Option[A]]) extends Equals {
 
   import LikeZIO._
 
@@ -71,6 +71,23 @@ final class LikeZIO[+A](_dirtyLogger: DirtyLogger, _either: Either[Seq[Throwable
   private def either: Either[Seq[Throwable], Option[A]] = _either
 
   @inline private def copy[U >: A](dirtyLogger: DirtyLogger = this._dirtyLogger, either: Either[Seq[Throwable], Option[U]] = this._either): LikeZIO[U] = LikeZIO(dirtyLogger, either)
+
+  override def canEqual(a: Any): Boolean = a.isInstanceOf[LikeZIO[A]]
+
+  override def equals(that: Any): Boolean =
+    that match {
+      case that: LikeZIO[A] =>
+        that.canEqual(this) && this.hashCode == that.hashCode && this.dirtyLogger == that.dirtyLogger && this.either == that.either
+      case _ => false
+    }
+
+  override def hashCode: Int = {
+    val prime = 31
+    val result0 = 1
+    val result1 = prime * result0 + _dirtyLogger.hashCode;
+    prime * result1 + _either.hashCode()
+
+  }
 }
 
 object LikeZIO {
