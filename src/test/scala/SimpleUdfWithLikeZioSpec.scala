@@ -1,9 +1,7 @@
-import core.LikeZIO
+
 import org.apache.spark.sql.{Dataset, SparkSession}
 import org.scalatest._
 import udfs.examples.{UdfAdd2, UdfCount, UdfHyperbola}
-
-import scala.collection.mutable
 
 
 object SimpleUdfWithLikeZioSpec {
@@ -44,7 +42,6 @@ object SimpleUdfWithLikeZioSpec {
 class SimpleUdfWithLikeZioSpec extends FlatSpec with Matchers with SparkTest with BeforeAndAfter {
 
   import SimpleUdfWithLikeZioSpec._
-  import spark.implicits._
   import org.apache.spark.sql.functions._
 
   it should "simple udf with int" in {
@@ -60,7 +57,7 @@ class SimpleUdfWithLikeZioSpec extends FlatSpec with Matchers with SparkTest wit
     applesWithAdd2.show(false)
 
 
-    val javaUdfAdd2 = new UdfAdd2().call _
+    val javaUdfAdd2 = new UdfAdd2.UdfJava().call _
     spark.udf.register("javaUdfAdd2", javaUdfAdd2)
 
     applesIn.write.saveAsTable("apples")

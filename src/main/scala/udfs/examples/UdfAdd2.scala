@@ -1,13 +1,8 @@
 package udfs.examples
 
-import core.{UdfHelper, LikeZIO}
-import org.apache.spark.sql.api.java.UDF1
+import core.LikeZIO
+import core.UdfHelper._
 
-import UdfHelper._
-
-class UdfAdd2 extends UDF1[Int, LikeZIO.LikeZIOForSpark[Int]] {
-  override def call(t1: Int): LikeZIO.LikeZIOForSpark[Int] = UdfAdd2.javaUdf(t1)
-}
 
 object UdfAdd2 extends Udf1Helper[Int, Int] {
 

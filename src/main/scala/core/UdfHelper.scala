@@ -3,16 +3,17 @@ package core
 import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions._
 import scala.reflect.runtime.universe.TypeTag
+import org.apache.spark.sql.api.java._
 
-sealed trait UdfHelper
+sealed trait UdfHelper extends Serializable
 
 object UdfHelper {
 
   trait Udf0Helper[RT] extends UdfHelper {
     protected def udfFun: Function0[LikeZIO[RT]]
 
-    def javaUdf(): LikeZIO.LikeZIOForSpark[RT] = {
-      udfFun.apply().prepareForSpark
+    class UdfJava extends UDF0[LikeZIO.LikeZIOForSpark[RT]] {
+      override def call(): LikeZIO.LikeZIOForSpark[RT] = udfFun.apply().prepareForSpark
     }
 
     def scalaUdf(implicit rtTypeTag: TypeTag[RT]): UserDefinedFunction = udf {
@@ -23,9 +24,10 @@ object UdfHelper {
   trait Udf1Helper[A1, RT] extends UdfHelper {
     protected def udfFun: Function1[A1, LikeZIO[RT]]
 
-    def javaUdf(a1: A1): LikeZIO.LikeZIOForSpark[RT] = {
-      udfFun.apply(a1).prepareForSpark
+    class UdfJava extends UDF1[A1, LikeZIO.LikeZIOForSpark[RT]] {
+      override def call(t1: A1): LikeZIO.LikeZIOForSpark[RT] = udfFun.apply(t1).prepareForSpark
     }
+
 
     def scalaUdf(implicit rtTypeTag: TypeTag[RT], a1TypeTag: TypeTag[A1]): UserDefinedFunction = udf {
       a1: A1 => udfFun.apply(a1).prepareForSpark
@@ -35,8 +37,10 @@ object UdfHelper {
   trait Udf2Helper[A1, A2, RT] extends UdfHelper {
     protected def udfFun: Function2[A1, A2, LikeZIO[RT]]
 
-    def javaUdf(a1: A1, a2: A2): LikeZIO.LikeZIOForSpark[RT] = {
-      udfFun.apply(a1, a2).prepareForSpark
+    class UdfJava extends UDF2[A1, A2, LikeZIO.LikeZIOForSpark[RT]] {
+
+      override def call(t1: A1, t2: A2): LikeZIO.LikeZIOForSpark[RT] = udfFun.apply(t1, t2).prepareForSpark
+
     }
 
     def scalaUdf(implicit rtTypeTag: TypeTag[RT], a1TypeTag: TypeTag[A1], a2TypeTag: TypeTag[A2]): UserDefinedFunction = udf {
