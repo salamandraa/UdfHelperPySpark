@@ -1,7 +1,7 @@
 import core.LikeZIO
 import org.apache.spark.sql.{Dataset, SparkSession}
 import org.scalatest._
-import udfs.examples.UdfAdd2
+import udfs.examples.{UdfAdd2, UdfCount, UdfHyperbola}
 
 import scala.collection.mutable
 
@@ -70,17 +70,7 @@ class SimpleUdfWithLikeZioSpec extends FlatSpec with Matchers with SparkTest wit
     applesWithJavaAdd2.printSchema()
     applesWithJavaAdd2.show(false)
 
-    val udfHyperbola = udf { value: Int =>
-
-      implicit val likeZioLog: LikeZIO[Int] = LikeZIO(1 / (value - 2), "Start")
-
-      val result = likeZioLog
-        .addLog("Calculated")
-        .addLog("End")
-
-
-      result.prepareForSpark
-    }
+    val udfHyperbola = UdfHyperbola.scalaUdf
 
     val applesWithHyperbola = applesIn.withColumn("hyperbola", udfHyperbola(col("id")))
 
@@ -93,17 +83,7 @@ class SimpleUdfWithLikeZioSpec extends FlatSpec with Matchers with SparkTest wit
   it should "" in {
     val appleWareHouses = getAppleWareHouses
 
-    val udfCount = udf { value: mutable.Seq[Apple] =>
-
-      implicit val likeZioLog: LikeZIO[Int] = LikeZIO(value.size, "Start")
-
-      val result = likeZioLog
-        .addLog("Calculated")
-        .addLog("End")
-
-
-      result.prepareForSpark
-    }
+    val udfCount = UdfCount.scalaUdf
 
     appleWareHouses.printSchema()
     val appleWareHousesWithSize = appleWareHouses.withColumn("count", udfCount(col("apples")))

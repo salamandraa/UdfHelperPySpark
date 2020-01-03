@@ -20,7 +20,7 @@ object UdfHelper {
     }
   }
 
-  trait Udf1Helper[RT, A1] extends UdfHelper {
+  trait Udf1Helper[A1, RT] extends UdfHelper {
     protected def udfFun: Function1[A1, LikeZIO[RT]]
 
     def javaUdf(a1: A1): LikeZIO.LikeZIOForSpark[RT] = {
@@ -32,7 +32,7 @@ object UdfHelper {
     }
   }
 
-  trait Udf2Helper[RT, A1, A2] extends UdfHelper {
+  trait Udf2Helper[A1, A2, RT] extends UdfHelper {
     protected def udfFun: Function2[A1, A2, LikeZIO[RT]]
 
     def javaUdf(a1: A1, a2: A2): LikeZIO.LikeZIOForSpark[RT] = {
