@@ -77,7 +77,7 @@ class SimpleUdfWithLikeZioSpec extends FlatSpec with Matchers with SparkTest wit
 
   }
 
-  it should "" in {
+  it should "udf count  =>  Udf1Helper[mutable.Seq[Apple], Int] " in {
     val appleWareHouses = getAppleWareHouses
 
     val udfCount = UdfCount.scalaUdf
