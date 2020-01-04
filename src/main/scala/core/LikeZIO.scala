@@ -53,6 +53,8 @@ final class LikeZIO[+A](_dirtyLogger: DirtyLogger, _either: Either[Seq[Throwable
     LikeZIO(dirtyLogger = this._dirtyLogger, either = resultEitherOpt)
   }
 
+  @inline def withFilter(f: A => Boolean): LikeZIO[A] = filter(f)
+
   def prepareForSpark[U >: A]: LikeZIOForSpark[U] = {
 
     val (value, exceptions) = _either match {
